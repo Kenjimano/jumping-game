@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Platformer Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background-color: #87CEEB;
+            overflow: hidden;
+            border: 3px solid #333;
+        }
+        #player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            bottom: 50px;
+            left: 50px;
+            font-size: 40px;
+            line-height: 1;
+            user-select: none;
+        }
+        .platform {
+            position: absolute;
+            background: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .platform-emoji {
+            font-size: 20px;
+            line-height: 1;
+            user-select: none;
+        }
+        .obstacle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            line-height: 1;
+            user-select: none;
+        }
+        #goal {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            right: 20px;
+            bottom: 50px;
+            font-size: 50px;
+            line-height: 1;
+            user-select: none;
+        }
+        #ground {
+            position: absolute;
+            width: 100%;
+            height: 50px;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            background-color: #8B4513;
+        }
+        #score-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 32px;
+            display: none;
+        }
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #restart-btn:hover {
+            background-color: #388E3C;
+        }
+        #controls {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player">🏃</div>
+        <div id="goal">🏁</div>
+        <div id="ground"></div>
+        <div id="score-container">Deaths: <span id="death-count">0</span></div>
+        <div id="game-over">
+            <div id="game-over-text">Game Over</div>
+            <button id="restart-btn">Restart</button>
+            <div id="controls">Controls: Arrow keys to move, Space to jump</div>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const player = document.getElementById('player');
+        const goal = document.getElementById('goal');
+        const gameContainer = document.getElementById('game-container');
+        const gameOver = document.getElementById('game-over');
+        const gameOverText = document.getElementById('game-over-text');
+        const restartBtn = document.getElementById('restart-btn');
+        const deathCount = document.getElementById('death-count');
+        
+        let playerX = 50;
+        let playerY = 50;
+        let velocityX = 0;
+        let velocityY = 0;
+        let isJumping = false;
+        let deaths = 0;
+        let gameActive = true;
+        
+        // Platform positions (x, y, width, height)
+        const platforms = [
+            { x: 150, y: 300, width: 200, height: 20 },
+            { x: 400, y: 250, width: 100, height: 20 },
+            { x: 550, y: 200, width: 100, height: 20 },
+            { x: 700, y: 150, width: 80, height: 20 }
+        ];
+        
+        // Create ground with grass emojis
+        for (let i = 0; i < Math.ceil(gameContainer.offsetWidth / 30); i++) {
+            const grassEmoji = document.createElement('div');
+            grassEmoji.textContent = '🌱';
+            grassEmoji.style.fontSize = '30px';
+            grassEmoji.style.lineHeight = '1';
+            grassEmoji.style.userSelect = 'none';
+            document.getElementById('ground').appendChild(grassEmoji);
+        }
+        
+        // Create platforms
+        platforms.forEach(platform => {
+            const platformElem = document.createElement('div');
+            platformElem.className = 'platform';
+            platformElem.style.left = `${platform.x}px`;
+            platformElem.style.top = `${platform.y}px`;
+            platformElem.style.width = `${platform.width}px`;
+            platformElem.style.height = `${platform.height}px`;
+            
+            // Fill platform with log emojis
+            const emojisNeeded = Math.ceil(platform.width / 20);
+            for (let i = 0; i < emojisNeeded; i++) {
+                const platformEmoji = document.createElement('div');
+                platformEmoji.className = 'platform-emoji';
+                platformEmoji.textContent = '🪵';
+                platformElem.appendChild(platformEmoji);
+            }
+            
+            gameContainer.appendChild(platformElem);
+        });
+        
+        // Obstacle positions (x, y, width, height, movingX, movingY, speedX, speedY, rangeX, rangeY)
+        const obstacles = [
+            { x: 200, y: 250, width: 30, height: 30, movingX: true, movingY: false, speedX: 2, speedY: 0, rangeX: 100, rangeY: 0, startX: 200, startY: 250, emoji: '🔥' },
+            { x: 450, y: 200, width: 30, height: 30, movingX: false, movingY: true, speedX: 0, speedY: 2, rangeX: 0, rangeY: 100, startX: 450, startY: 200, emoji: '🌪️' },
+            { x: 600, y: 150, width: 30, height: 30, movingX: true, movingY: true, speedX: 1.5, speedY: 1.5, rangeX: 50, rangeY: 50, startX: 600, startY: 150, emoji: '⚡' }
+        ];
+        
+        // Create obstacles
+        const obstacleElements = obstacles.map(obstacle => {
+            const obstacleElem = document.createElement('div');
+            obstacleElem.className = 'obstacle';
+            obstacleElem.textContent = obstacle.emoji;
+            obstacleElem.style.left = `${obstacle.x}px`;
+            obstacleElem.style.top = `${obstacle.y}px`;
+            obstacleElem.style.width = `${obstacle.width}px`;
+            obstacleElem.style.height = `${obstacle.height}px`;
+            gameContainer.appendChild(obstacleElem);
+            return obstacleElem;
+        });
+        
+        // Key state
+        const keys = {
+            ArrowLeft: false,
+            ArrowRight: false,
+            ArrowUp: false,
+            Space: false
+        };
+        
+        // Event listeners
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.code)) {
+                keys[e.code] = true;
+            }
+            if (e.code === 'Space') {
+                keys.Space = true;
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.code)) {
+                keys[e.code] = false;
+            }
+            if (e.code === 'Space') {
+                keys.Space = false;
+            }
+        });
+        
+        restartBtn.addEventListener('click', restartGame);
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            // Player movement
+            if (keys.ArrowLeft) {
+                velocityX = Math.max(velocityX - 0.5, -5);
+            } else if (keys.ArrowRight) {
+                velocityX = Math.min(velocityX + 0.5, 5);
+            } else {
+                velocityX *= 0.9; // Friction
+            }
+            
+            // Jump
+            if ((keys.ArrowUp || keys.Space) && !isJumping) {
+                velocityY = -10;
+                isJumping = true;
+            }
+            
+            // Apply gravity
+            velocityY += 0.5;
+            
+            // Update player position
+            playerX += velocityX;
+            playerY += velocityY;
+            
+            // Boundary check
+            if (playerX < 0) playerX = 0;
+            if (playerX > gameContainer.offsetWidth - player.offsetWidth) {
+                playerX = gameContainer.offsetWidth - player.offsetWidth;
+            }
+            
+            // Check if player is on a platform or the ground
+            isJumping = true;
+            
+            // Ground collision
+            if (playerY + player.offsetHeight > gameContainer.offsetHeight - 50) { // 50 is ground height
+                playerY = gameContainer.offsetHeight - player.offsetHeight - 50;
+                velocityY = 0;
+                isJumping = false;
+            }
+            
+            // Platform collision
+            platforms.forEach(platform => {
+                if (
+                    playerX + player.offsetWidth > platform.x &&
+                    playerX < platform.x + platform.width &&
+                    playerY + player.offsetHeight > platform.y &&
+                    playerY + player.offsetHeight < platform.y + 10 &&
+                    velocityY > 0
+                ) {
+                    playerY = platform.y - player.offsetHeight;
+                    velocityY = 0;
+                    isJumping = false;
+                }
+            });
+            
+            // Update obstacles
+            obstacles.forEach((obstacle, index) => {
+                if (obstacle.movingX) {
+                    obstacle.x += obstacle.speedX;
+                    if (
+                        obstacle.x > obstacle.startX + obstacle.rangeX ||
+                        obstacle.x < obstacle.startX - obstacle.rangeX
+                    ) {
+                        obstacle.speedX *= -1;
+                    }
+                }
+                
+                if (obstacle.movingY) {
+                    obstacle.y += obstacle.speedY;
+                    if (
+                        obstacle.y > obstacle.startY + obstacle.rangeY ||
+                        obstacle.y < obstacle.startY - obstacle.rangeY
+                    ) {
+                        obstacle.speedY *= -1;
+                    }
+                }
+                
+                obstacleElements[index].style.left = `${obstacle.x}px`;
+                obstacleElements[index].style.top = `${obstacle.y}px`;
+                
+                // Collision with obstacles
+                if (
+                    playerX + player.offsetWidth > obstacle.x &&
+                    playerX < obstacle.x + obstacle.width &&
+                    playerY + player.offsetHeight > obstacle.y &&
+                    playerY < obstacle.y + obstacle.height
+                ) {
+                    playerDeath();
+                }
+            });
+            
+            // Check for goal
+            if (
+                playerX + player.offsetWidth > goal.offsetLeft &&
+                playerX < goal.offsetLeft + goal.offsetWidth &&
+                playerY + player.offsetHeight > goal.offsetTop &&
+                playerY < goal.offsetTop + goal.offsetHeight
+            ) {
+                gameWin();
+            }
+            
+            // Update player position
+            player.style.left = `${playerX}px`;
+            player.style.bottom = `${gameContainer.offsetHeight - playerY - player.offsetHeight}px`;
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function playerDeath() {
+            deaths++;
+            deathCount.textContent = deaths;
+            // Change player emoji to show death temporarily
+            player.textContent = '💀';
+            setTimeout(() => {
+                player.textContent = '🏃';
+            }, 500);
+            // Reset player position
+            playerX = 50;
+            playerY = 50;
+            velocityX = 0;
+            velocityY = 0;
+        }
+        
+        function gameWin() {
+            gameActive = false;
+            gameOverText.textContent = "🎉 You Win! 🎉";
+            gameOver.style.display = "flex";
+            player.textContent = '🥳';
+        }
+        
+        function restartGame() {
+            gameActive = true;
+            gameOver.style.display = "none";
+            deaths = 0;
+            deathCount.textContent = deaths;
+            playerX = 50;
+            playerY = 50;
+            velocityX = 0;
+            velocityY = 0;
+            player.textContent = '🏃';
+            gameLoop();
+        }
+        
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
