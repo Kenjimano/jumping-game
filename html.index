@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle Arena: You and Two Allies vs Enemies</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #222;
+      color: white;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    #resources {
+      background-color: #444;
+      padding: 10px 20px;
+      border-radius: 20px;
+      margin-bottom: 15px;
+      font-size: 18px;
+      font-weight: bold;
+      color: gold;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    }
+    
+    #coins {
+      margin-left: 5px;
+    }
+    
+    #game-container {
+      width: 800px;
+      max-width: 100%;
+      background-color: #333;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    #battle-arena {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    
+    .team {
+      width: 48%;
+    }
+    
+    .character {
+      background-color: #444;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    
+    .character.player {
+      border-left: 4px solid #4CAF50;
+    }
+    
+    .character.ally {
+      border-left: 4px solid #2196F3;
+    }
+    
+    .character.enemy {
+      border-left: 4px solid #f44336;
+    }
+    
+    .health-bar {
+      height: 10px;
+      background-color: #666;
+      margin-top: 5px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    
+    .health-fill {
+      height: 100%;
+      background-color: #4CAF50;
+      width: 100%;
+      transition: width 0.3s ease;
+    }
+    
+    .enemy .health-fill {
+      background-color: #f44336;
+    }
+    
+    .ally .health-fill {
+      background-color: #2196F3;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+    }
+    
+    #target-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    
+    #target-buttons button {
+      background-color: #f44336;
+    }
+    
+    #target-buttons button:hover {
+      background-color: #e53935;
+    }
+    
+    #log {
+      height: 200px;
+      overflow-y: auto;
+      background-color: #444;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      font-family: monospace;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+      line-height: 1.4;
+    }
+    
+    .player-log {
+      color: #4CAF50;
+    }
+    
+    .ally-log {
+      color: #2196F3;
+    }
+    
+    .enemy-log {
+      color: #f44336;
+    }
+    
+    .system-log {
+      color: #FFC107;
+      font-weight: bold;
+    }
+    
+    .dead {
+      opacity: 0.5;
+    }
+    
+    #new-wave-button {
+      background-color: #FFC107;
+      color: black;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    #shop {
+      display: none;
+      flex-direction: column;
+      background-color: #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+      width: 100%;
+      border: 2px solid gold;
+    }
+    
+    #shop-title {
+      color: gold;
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 24px;
+    }
+    
+    .shop-section {
+      margin-bottom: 15px;
+    }
+    
+    .shop-section h3 {
+      border-bottom: 1px solid #555;
+      padding-bottom: 5px;
+      color: #FFC107;
+    }
+    
+    .shop-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .shop-item {
+      background-color: #444;
+      padding: 10px;
+      border-radius: 5px;
+      min-width: 150px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #666;
+    }
+    
+    .shop-item:hover {
+      background-color: #555;
+      transform: translateY(-2px);
+    }
+    
+    .shop-item.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .shop-item-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .shop-item-cost {
+      color: gold;
+      font-size: 14px;
+    }
+    
+    .shop-item-desc {
+      font-size: 12px;
+      color: #ccc;
+      margin-top: 5px;
+    }
+    
+    #shop-close {
+      align-self: center;
+      margin-top: 10px;
+      background-color: #666;
+    }
+    
+    #shop-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    #open-shop-button {
+      background-color: gold;
+      color: #333;
+      font-weight: bold;
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .special-meter {
+      height: 5px;
+      background-color: #666;
+      margin-top: 2px;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    
+    .special-fill {
+      height: 100%;
+      background-color: #9C27B0;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    #ability-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    #ability-buttons button {
+      background-color: #9C27B0;
+    }
+    
+    #ability-buttons button:hover {
+      background-color: #7B1FA2;
+    }
+    
+    #game-over {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+    
+    #restart-button {
+      background-color: #FFC107;
+      color: black;
+      margin-top: 10px;
+    }
+    
+    .character-icon {
+      font-size: 20px;
+      margin-right: 5px;
+    }
+    
+    .wave-info {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 18px;
+      color: #FFC107;
+    }
+  </style>
+</head>
+<body>
+  <h1>Battle Arena: You and Two Allies vs Enemies</h1>
+  <div id="resources">
+    <span>💰</span>
+    <span id="coins">0</span>
+  </div>
+  <div id="game-container">
+    <div class="wave-info">Wave <span id="current-wave">1</span> - Difficulty: HARD</div>
+    <div id="battle-arena">
+      <div class="team" id="heroes-team">
+        <h2>Heroes</h2>
+        <div id="player" class="character player">
+          <div class="stats">
+            <span><span class="character-icon">👨‍🦱</span> <span class="name">Player</span> (Lv <span class="level">1</span>)</span>
+            <span>ATK: <span class="attack">10</span> DEF: <span class="defense">5</span></span>
+          </div>
+          <div class="health-bar"><div class="health-fill"></div></div>
+          <div class="special-meter"><div class="special-fill"></div></div>
+        </div>
+        <div id="ally1" class="character ally">
+          <div class="stats">
+            <span><span class="character-icon">🧙‍♂️</span> <span class="name">Wizard</span> (Lv <span class="level">1</span>)</span>
+            <span>ATK: <span class="attack">8</span> DEF: <span class="defense">3</span></span>
+          </div>
+          <div class="health-bar"><div class="health-fill"></div></div>
+          <div class="special-meter"><div class="special-fill"></div></div>
+        </div>
+        <div id="ally2" class="character ally">
+          <div class="stats">
+            <span><span class="character-icon">🛡️</span> <span class="name">Knight</span> (Lv <span class="level">1</span>)</span>
+            <span>ATK: <span class="attack">7</span> DEF: <span class="defense">8</span></span>
+          </div>
+          <div class="health-bar"><div class="health-fill"></div></div>
+          <div class="special-meter"><div class="special-fill"></div></div>
+        </div>
+      </div>
+      
+      <div class="team" id="enemies-team">
+        <h2>Enemies</h2>
+        <div id="enemies-container"></div>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <div id="action-buttons">
+        <button id="attack-button">Attack</button>
+        <button id="defend-button">Defend</button>
+        <div id="ability-buttons">
+          <button id="special-button" disabled>Special Attack (50%)</button>
+          <button id="heal-button" disabled>Heal Team (100%)</button>
+        </div>
+      </div>
+      
+      <div id="target-buttons" style="display: none;"></div>
+      
+      <button id="new-wave-button">Start Next Wave</button>
+      
+      <div id="shop-buttons">
+        <button id="open-shop-button">Open Shop</button>
+      </div>
+      
+      <div id="shop">
+        <div id="shop-title">🏪 Hero Upgrades Shop 🏪</div>
+        
+        <div class="shop-section">
+          <h3>Character Upgrades</h3>
+          <div class="shop-items" id="character-upgrades"></div>
+        </div>
+        
+        <div class="shop-section">
+          <h3>Stat Boosts</h3>
+          <div class="shop-items" id="stat-boosts"></div>
+        </div>
+        
+        <div class="shop-section">
+          <h3>Special Items</h3>
+          <div class="shop-items" id="special-items"></div>
+        </div>
+        
+        <button id="shop-close">Close Shop</button>
+      </div>
+      
+      <div id="game-over">
+        <h2 id="game-over-message"></h2>
+        <button id="restart-button">Restart Game</button>
+      </div>
+    </div>
+    
+    <div id="log"></div>
+  </div>
+
+  <script>
+    class Character {
+      constructor(id, name, icon, type, maxHealth, attack, defense, level = 1) {
+        this.id = id;
+        this.name = name;
+        this.icon = icon;
+        this.type = type;
+        this.maxHealth = maxHealth;
+        this.currentHealth = maxHealth;
+        this.attack = attack;
+        this.defense = defense;
+        this.isDefending = false;
+        this.level = level;
+        this.specialMeter = 0;
+        this.isAlive = true;
+      }
+      
+      takeDamage(amount, multiplier = 1) {
+        let damageReduction = this.defense;
+        if (this.isDefending) {
+          damageReduction *= 2;
+          this.isDefending = false;
+        }
+        
+        // Apply damage multiplier and add randomness
+        const modifiedAmount = Math.floor(amount * multiplier * (0.9 + Math.random() * 0.3));
+        
+        // Reduce by defense, with diminishing returns on higher defense values
+        const defenseEffect = damageReduction / (damageReduction + 10);
+        const reductionAmount = Math.floor(modifiedAmount * defenseEffect);
+        const actualDamage = Math.max(1, modifiedAmount - reductionAmount);
+        
+        this.currentHealth = Math.max(0, this.currentHealth - actualDamage);
+        
+        if (this.currentHealth === 0) {
+          this.isAlive = false;
+        }
+        
+        return actualDamage;
+      }
+      
+      heal(amount) {
+        const healingAmount = Math.min(amount, this.maxHealth - this.currentHealth);
+        this.currentHealth += healingAmount;
+        return healingAmount;
+      }
+      
+      defend() {
+        this.isDefending = true;
+        this.addSpecial(10);
+        return true;
+      }
+      
+      addSpecial(amount) {
+        this.specialMeter = Math.min(100, this.specialMeter + amount);
+      }
+      
+      useSpecial(cost) {
+        if (this.specialMeter >= cost) {
+          this.specialMeter -= cost;
+          return true;
+        }
+        return false;
+      }
+      
+      attackTarget(target) {
+        if (!this.isAlive || !target.isAlive) return 0;
+        
+        const damage = Math.floor(this.attack * (0.9 + Math.random() * 0.3));
+        const actualDamage = target.takeDamage(damage);
+        
+        this.addSpecial(15);
+        
+        return actualDamage;
+      }
+    }
+    
+    class Game {
+      constructor() {
+        this.heroes = [];
+        this.enemies = [];
+        this.currentTurn = 'player';
+        this.isGameOver = false;
+        this.wave = 1;
+        this.waveCompleted = false;
+        this.coins = 0;
+        
+        this.logElement = document.getElementById('log');
+        this.targetButtonsContainer = document.getElementById('target-buttons');
+        this.actionButtonsContainer = document.getElementById('action-buttons');
+        this.newWaveButton = document.getElementById('new-wave-button');
+        this.gameOverContainer = document.getElementById('game-over');
+        this.gameOverMessage = document.getElementById('game-over-message');
+        this.currentWaveElement = document.getElementById('current-wave');
+        this.specialButton = document.getElementById('special-button');
+        this.healButton = document.getElementById('heal-button');
+        this.coinsElement = document.getElementById('coins');
+        this.shopElement = document.getElementById('shop');
+        this.openShopButton = document.getElementById('open-shop-button');
+        this.shopButtons = document.getElementById('shop-buttons');
+        
+        this.initializeGame();
+        this.setupEventListeners();
+        this.setupShop();
+      }
+      
+      initializeGame() {
+        this.heroes = [
+          new Character('player', 'Player', '👨‍🦱', 'player', 90, 10, 4, 1),
+          new Character('ally1', 'Wizard', '🧙‍♂️', 'ally', 65, 8, 2, 1),
+          new Character('ally2', 'Knight', '🛡️', 'ally', 110, 7, 7, 1)
+        ];
+        
+        this.generateEnemies();
+        this.updateUI();
+        this.log('Game started! Your turn to attack.', 'system');
+      }
+      
+      generateEnemies() {
+        this.enemies = [];
+        const enemiesContainer = document.getElementById('enemies-container');
+        enemiesContainer.innerHTML = '';
+        
+        const enemyTypes = [
+          { name: 'Goblin', icon: '👺', health: 45, attack: 7, defense: 3 },
+          { name: 'Orc', icon: '👹', health: 70, attack: 9, defense: 5 },
+          { name: 'Skeleton', icon: '💀', health: 40, attack: 8, defense: 3 },
+          { name: 'Troll', icon: '👿', health: 90, attack: 11, defense: 6 },
+          { name: 'Dark Mage', icon: '🧙‍♀️', health: 55, attack: 12, defense: 2 }
+        ];
+        
+        // More enemies in later waves
+        const enemyCount = Math.min(4, 2 + Math.floor(this.wave / 2));
+        
+        // Add a boss every 3 waves
+        const isBossWave = this.wave % 3 === 0;
+        
+        if (isBossWave && this.wave > 1) {
+          const bossType = { 
+            name: 'Boss', 
+            icon: '👾', 
+            health: 120 + (this.wave * 25), 
+            attack: 13 + (this.wave * 2), 
+            defense: 8 + this.wave 
+          };
+          
+          const boss = new Character(
+            `enemy0`,
+            `${['Demon', 'Overlord', 'Necromancer', 'Dragon'][Math.floor(Math.random() * 4)]}`,
+            bossType.icon,
+            'enemy',
+            bossType.health,
+            bossType.attack,
+            bossType.defense,
+            Math.max(2, Math.floor(this.wave * 0.8))
+          );
+          
+          this.enemies.push(boss);
+          
+          const bossElement = document.createElement('div');
+          bossElement.id = boss.id;
+          bossElement.className = 'character enemy';
+          bossElement.innerHTML = `
+            <div class="stats">
+              <span><span class="character-icon">${boss.icon}</span> <span class="name">${boss.name}</span> (Lv <span class="level">${boss.level}</span>)</span>
+              <span>ATK: <span class="attack">${boss.attack}</span> DEF: <span class="defense">${boss.defense}</span></span>
+            </div>
+            <div class="health-bar"><div class="health-fill"></div></div>
+          `;
+          
+          enemiesContainer.appendChild(bossElement);
+        }
+        
+        for (let i = 0; i < (isBossWave ? enemyCount - 1 : enemyCount); i++) {
+          const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+          const level = Math.max(1, Math.floor(this.wave * 0.8));
+          const statMultiplier = 1 + (level - 1) * 0.25;
+          
+          const enemy = new Character(
+            `enemy${i}`,
+            `${enemyType.name} ${i+1}`,
+            enemyType.icon,
+            'enemy',
+            Math.floor(enemyType.health * statMultiplier),
+            Math.floor(enemyType.attack * statMultiplier),
+            Math.floor(enemyType.defense * statMultiplier),
+            level
+          );
+          
+          this.enemies.push(enemy);
+          
+          const enemyElement = document.createElement('div');
+          enemyElement.id = enemy.id;
+          enemyElement.className = 'character enemy';
+          enemyElement.innerHTML = `
+            <div class="stats">
+              <span><span class="character-icon">${enemy.icon}</span> <span class="name">${enemy.name}</span> (Lv <span class="level">${enemy.level}</span>)</span>
+              <span>ATK: <span class="attack">${enemy.attack}</span> DEF: <span class="defense">${enemy.defense}</span></span>
+            </div>
+            <div class="health-bar"><div class="health-fill"></div></div>
+          `;
+          
+          enemiesContainer.appendChild(enemyElement);
+        }
+      }
+      
+      setupEventListeners() {
+        document.getElementById('attack-button').addEventListener('click', () => this.showTargetSelection());
+        document.getElementById('defend-button').addEventListener('click', () => this.playerDefend());
+        document.getElementById('special-button').addEventListener('click', () => this.showTargetSelection(true));
+        document.getElementById('heal-button').addEventListener('click', () => this.playerHeal());
+        document.getElementById('new-wave-button').addEventListener('click', () => this.startNewWave());
+        document.getElementById('restart-button').addEventListener('click', () => this.restart());
+        document.getElementById('open-shop-button').addEventListener('click', () => this.openShop());
+        document.getElementById('shop-close').addEventListener('click', () => this.closeShop());
+      }
+      
+      setupShop() {
+        // Create character upgrade options
+        const characterUpgrades = document.getElementById('character-upgrades');
+        characterUpgrades.innerHTML = '';
+        
+        const characterItems = [
+          { id: 'player-level', name: 'Player Level Up', cost: 100, description: 'Increase all Player stats by 10%' },
+          { id: 'wizard-level', name: 'Wizard Level Up', cost: 80, description: 'Increase all Wizard stats by 10%' },
+          { id: 'knight-level', name: 'Knight Level Up', cost: 80, description: 'Increase all Knight stats by 10%' }
+        ];
+        
+        characterItems.forEach(item => {
+          const itemElement = document.createElement('div');
+          itemElement.className = 'shop-item';
+          itemElement.dataset.id = item.id;
+          itemElement.dataset.cost = item.cost;
+          itemElement.innerHTML = `
+            <div class="shop-item-name">${item.name}</div>
+            <div class="shop-item-cost">💰 ${item.cost}</div>
+            <div class="shop-item-desc">${item.description}</div>
+          `;
+          
+          itemElement.addEventListener('click', () => this.purchaseItem(item.id, item.cost));
+          characterUpgrades.appendChild(itemElement);
+        });
+        
+        // Create stat boost options
+        const statBoosts = document.getElementById('stat-boosts');
+        statBoosts.innerHTML = '';
+        
+        const statItems = [
+          { id: 'attack-boost', name: 'Attack Boost', cost: 50, description: 'Increase attack of all heroes by 5' },
+          { id: 'defense-boost', name: 'Defense Boost', cost: 50, description: 'Increase defense of all heroes by 3' },
+          { id: 'health-boost', name: 'Health Boost', cost: 60, description: 'Increase max health of all heroes by 15%' }
+        ];
+        
+        statItems.forEach(item => {
+          const itemElement = document.createElement('div');
+          itemElement.className = 'shop-item';
+          itemElement.dataset.id = item.id;
+          itemElement.dataset.cost = item.cost;
+          itemElement.innerHTML = `
+            <div class="shop-item-name">${item.name}</div>
+            <div class="shop-item-cost">💰 ${item.cost}</div>
+            <div class="shop-item-desc">${item.description}</div>
+          `;
+          
+          itemElement.addEventListener('click', () => this.purchaseItem(item.id, item.cost));
+          statBoosts.appendChild(itemElement);
+        });
+        
+        // Create special items
+        const specialItems = document.getElementById('special-items');
+        specialItems.innerHTML = '';
+        
+        const specialItemsList = [
+          { id: 'full-heal', name: 'Full Heal', cost: 30, description: 'Fully restore health for all heroes' },
+          { id: 'special-charge', name: 'Special Charge', cost: 25, description: 'Fill special meters for all heroes' },
+          { id: 'revive', name: 'Revive', cost: 120, description: 'Revive a defeated hero with 50% health' }
+        ];
+        
+        specialItemsList.forEach(item => {
+          const itemElement = document.createElement('div');
+          itemElement.className = 'shop-item';
+          itemElement.dataset.id = item.id;
+          itemElement.dataset.cost = item.cost;
+          itemElement.innerHTML = `
+            <div class="shop-item-name">${item.name}</div>
+            <div class="shop-item-cost">💰 ${item.cost}</div>
+            <div class="shop-item-desc">${item.description}</div>
+          `;
+          
+          itemElement.addEventListener('click', () => this.purchaseItem(item.id, item.cost));
+          specialItems.appendChild(itemElement);
+        });
+      }
+      
+      openShop() {
+        this.shopElement.style.display = 'flex';
+        this.shopButtons.style.display = 'none';
+        this.updateShopAvailability();
+      }
+      
+      closeShop() {
+        this.shopElement.style.display = 'none';
+        this.shopButtons.style.display = 'flex';
+      }
+      
+      updateShopAvailability() {
+        const shopItems = document.querySelectorAll('.shop-item');
+        shopItems.forEach(item => {
+          const cost = parseInt(item.dataset.cost);
+          if (cost > this.coins) {
+            item.classList.add('disabled');
+          } else {
+            item.classList.remove('disabled');
+          }
+        });
+      }
+      
+      purchaseItem(itemId, cost) {
+        if (this.coins < cost) {
+          this.log(`Not enough coins to purchase ${itemId}. You need ${cost} coins.`, 'system');
+          return;
+        }
+        
+        this.coins -= cost;
+        this.updateCoins();
+        
+        switch(itemId) {
+          case 'player-level':
+            this.upgradeCharacter(0);
+            break;
+          case 'wizard-level':
+            this.upgradeCharacter(1);
+            break;
+          case 'knight-level':
+            this.upgradeCharacter(2);
+            break;
+          case 'attack-boost':
+            this.boostStat('attack');
+            break;
+          case 'defense-boost':
+            this.boostStat('defense');
+            break;
+          case 'health-boost':
+            this.boostStat('health');
+            break;
+          case 'full-heal':
+            this.fullHeal();
+            break;
+          case 'special-charge':
+            this.chargeSpecials();
+            break;
+          case 'revive':
+            this.reviveHero();
+            break;
+        }
+        
+        this.updateUI();
+        this.updateShopAvailability();
+      }
+      
+      upgradeCharacter(index) {
+        const hero = this.heroes[index];
+        if (!hero || !hero.isAlive) return;
+        
+        hero.maxHealth = Math.floor(hero.maxHealth * 1.1);
+        hero.attack = Math.floor(hero.attack * 1.1);
+        hero.defense = Math.floor(hero.defense * 1.1);
+        hero.currentHealth = Math.min(hero.currentHealth + Math.floor(hero.maxHealth * 0.3), hero.maxHealth);
+        
+        this.log(`${hero.icon} ${hero.name} has been upgraded! All stats increased by 10%.`, 'system');
+      }
+      
+      boostStat(stat) {
+        this.heroes.forEach(hero => {
+          if (!hero.isAlive) return;
+          
+          switch(stat) {
+            case 'attack':
+              hero.attack += 5;
+              break;
+            case 'defense':
+              hero.defense += 3;
+              break;
+            case 'health':
+              const increase = Math.floor(hero.maxHealth * 0.15);
+              hero.maxHealth += increase;
+              hero.currentHealth += increase;
+              break;
+          }
+        });
+        
+        const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
+        this.log(`${statName} boosted for all heroes!`, 'system');
+      }
+      
+      fullHeal() {
+        this.heroes.forEach(hero => {
+          if (hero.isAlive) {
+            const healAmount = hero.maxHealth - hero.currentHealth;
+            hero.currentHealth = hero.maxHealth;
+            this.log(`${hero.icon} ${hero.name} healed for ${healAmount} HP.`, 'system');
+          }
+        });
+      }
+      
+      chargeSpecials() {
+        this.heroes.forEach(hero => {
+          if (hero.isAlive) {
+            const chargeAmount = 100 - hero.specialMeter;
+            hero.specialMeter = 100;
+            this.log(`${hero.icon} ${hero.name}'s special meter has been filled!`, 'system');
+          }
+        });
+      }
+      
+      reviveHero() {
+        const deadHeroes = this.heroes.filter(hero => !hero.isAlive);
+        
+        if (deadHeroes.length === 0) {
+          this.log('No heroes need to be revived!', 'system');
+          return;
+        }
+        
+        const hero = deadHeroes[0];
+        hero.isAlive = true;
+        hero.currentHealth = Math.floor(hero.maxHealth * 0.5);
+        
+        this.log(`${hero.icon} ${hero.name} has been revived with ${hero.currentHealth} HP!`, 'system');
+      }
+      
+      showTargetSelection(isSpecial = false) {
+        this.targetButtonsContainer.innerHTML = '';
+        this.targetButtonsContainer.style.display = 'flex';
+        this.actionButtonsContainer.style.display = 'none';
+        
+        this.enemies.forEach(enemy => {
+          if (enemy.isAlive) {
+            const button = document.createElement('button');
+            button.textContent = `${enemy.icon} ${enemy.name} (HP: ${enemy.currentHealth}/${enemy.maxHealth})`;
+            button.addEventListener('click', () => {
+              if (isSpecial) {
+                this.playerSpecialAttack(enemy);
+              } else {
+                this.playerAttack(enemy);
+              }
+              this.targetButtonsContainer.style.display = 'none';
+              this.actionButtonsContainer.style.display = 'flex';
+            });
+            this.targetButtonsContainer.appendChild(button);
+          }
+        });
+        
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.backgroundColor = '#777';
+        cancelButton.addEventListener('click', () => {
+          this.targetButtonsContainer.style.display = 'none';
+          this.actionButtonsContainer.style.display = 'flex';
+        });
+        this.targetButtonsContainer.appendChild(cancelButton);
+      }
+      
+      playerAttack(target) {
+        const player = this.heroes[0];
+        const damage = player.attackTarget(target);
+        
+        this.log(`${player.icon} ${player.name} attacks ${target.icon} ${target.name} for ${damage} damage!`, 'player');
+        
+        if (!target.isAlive) {
+          this.log(`${target.icon} ${target.name} has been defeated!`, 'system');
+          // Add coins when enemy is defeated
+          const coinsEarned = 5 + Math.floor(this.wave * 1.5);
+          this.addCoins(coinsEarned);
+          this.log(`You earned ${coinsEarned} coins!`, 'system');
+        }
+        
+        this.updateUI();
+        this.checkGameState();
+        
+        if (!this.isGameOver && !this.waveCompleted) {
+          this.alliesMove();
+        }
+      }
+      
+      // Method to add coins
+      addCoins(amount) {
+        this.coins += amount;
+        this.updateCoins();
+      }
+      
+      // Update coins display
+      updateCoins() {
+        this.coinsElement.textContent = this.coins;
+      }
+      
+      playerDefend() {
+        const player = this.heroes[0];
+        player.defend();
+        
+        this.log(`${player.icon} ${player.name} takes a defensive stance, increasing defense for the next attack.`, 'player');
+        this.updateUI();
+        this.alliesMove();
+      }
+      
+      playerSpecialAttack(target) {
+        const player = this.heroes[0];
+        
+        if (player.useSpecial(50)) {
+          // Special attack can critically hit or miss
+          const roll = Math.random();
+          
+          // 10% chance to miss
+          if (roll < 0.1) {
+            this.log(`${player.icon} ${player.name}'s special attack misses ${target.icon} ${target.name}!`, 'player');
+          } 
+          // 20% chance to critically hit
+          else if (roll > 0.9) {
+            const damage = Math.floor(player.attack * 3.5);
+            const actualDamage = target.takeDamage(damage);
+            
+            this.log(`${player.icon} ${player.name} unleashes a CRITICAL special attack on ${target.icon} ${target.name} for ${actualDamage} damage!`, 'player');
+            
+            if (!target.isAlive) {
+              this.log(`${target.icon} ${target.name} has been defeated!`, 'system');
+            }
+          } 
+          // Normal hit
+          else {
+            const damage = Math.floor(player.attack * 2.2); // Slightly reduced damage
+            const actualDamage = target.takeDamage(damage);
+            
+            this.log(`${player.icon} ${player.name} unleashes a special attack on ${target.icon} ${target.name} for ${actualDamage} damage!`, 'player');
+            
+            if (!target.isAlive) {
+              this.log(`${target.icon} ${target.name} has been defeated!`, 'system');
+            }
+          }
+          
+          this.updateUI();
+          this.checkGameState();
+          
+          if (!this.isGameOver && !this.waveCompleted) {
+            this.alliesMove();
+          }
+        }
+      }
+      
+      playerHeal() {
+        const player = this.heroes[0];
+        
+        if (player.useSpecial(100)) {
+          const healAmount = Math.floor(player.attack * 2);
+          
+          this.heroes.forEach(hero => {
+            if (hero.isAlive) {
+              const amount = hero.heal(healAmount);
+              this.log(`${player.icon} ${player.name} heals ${hero.icon} ${hero.name} for ${amount} HP.`, 'player');
+            }
+          });
+          
+          this.updateUI();
+          this.alliesMove();
+        }
+      }
+      
+      alliesMove() {
+        for (let i = 1; i < this.heroes.length; i++) {
+          const ally = this.heroes[i];
+          if (!ally.isAlive) continue;
+          
+          // If ally is low on health, chance to defend
+          if (ally.currentHealth < ally.maxHealth * 0.3 && Math.random() < 0.5) {
+            ally.defend();
+            this.log(`${ally.icon} ${ally.name} takes a defensive stance, increasing defense for the next attack.`, 'ally');
+          } 
+          // Use special if available with some chance
+          else if (ally.specialMeter >= 50 && Math.random() < 0.4) {
+            const aliveEnemies = this.enemies.filter(e => e.isAlive);
+            if (aliveEnemies.length > 0) {
+              const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+              ally.useSpecial(50);
+              
+              const damage = Math.floor(ally.attack * 2);
+              const actualDamage = target.takeDamage(damage);
+              
+              this.log(`${ally.icon} ${ally.name} uses a special ability on ${target.icon} ${target.name} for ${actualDamage} damage!`, 'ally');
+              
+              if (!target.isAlive) {
+                this.log(`${target.icon} ${target.name} has been defeated!`, 'system');
+              }
+            }
+          }
+          // Otherwise attack
+          else {
+            const aliveEnemies = this.enemies.filter(e => e.isAlive);
+            if (aliveEnemies.length > 0) {
+              const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+              const damage = ally.attackTarget(target);
+              
+              this.log(`${ally.icon} ${ally.name} attacks ${target.icon} ${target.name} for ${damage} damage!`, 'ally');
+              
+              if (!target.isAlive) {
+                this.log(`${target.icon} ${target.name} has been defeated!`, 'system');
+              }
+            }
+          }
+        }
+        
+        this.updateUI();
+        this.checkGameState();
+        
+        if (!this.isGameOver && !this.waveCompleted) {
+          setTimeout(() => this.enemiesMove(), 500);
+        }
+      }
+      
+      enemiesMove() {
+        const aliveHeroes = this.heroes.filter(h => h.isAlive);
+        if (aliveHeroes.length === 0) return;
+        
+        for (const enemy of this.enemies) {
+          if (!enemy.isAlive) continue;
+          
+          // Boss enemies have special abilities
+          if (enemy.name.includes('Dragon') || enemy.name.includes('Demon') || 
+              enemy.name.includes('Overlord') || enemy.name.includes('Necromancer')) {
+            
+            // 30% chance to use a special attack that hits all heroes
+            if (Math.random() < 0.3) {
+              const attackPower = Math.floor(enemy.attack * 0.7);
+              this.log(`${enemy.icon} ${enemy.name} unleashes a powerful area attack!`, 'enemy');
+              
+              for (const hero of aliveHeroes) {
+                const damage = hero.takeDamage(attackPower);
+                this.log(`${hero.icon} ${hero.name} takes ${damage} damage!`, 'enemy');
+                
+                if (!hero.isAlive) {
+                  this.log(`${hero.icon} ${hero.name} has been defeated!`, 'system');
+                }
+              }
+              continue;
+            }
+            
+            // 20% chance to buff itself
+            if (Math.random() < 0.2) {
+              enemy.attack += Math.floor(enemy.attack * 0.15);
+              this.log(`${enemy.icon} ${enemy.name} empowers itself, increasing attack to ${enemy.attack}!`, 'enemy');
+              continue;
+            }
+          }
+          
+          // Smart targeting - target the weakest hero or the one with lowest defense
+          let target;
+          
+          // Target player more often if they're low on health
+          if (this.heroes[0].isAlive && this.heroes[0].currentHealth < this.heroes[0].maxHealth * 0.3 && Math.random() < 0.6) {
+            target = this.heroes[0];
+          } 
+          // 30% chance to attack the hero with lowest HP
+          else if (Math.random() < 0.3) {
+            target = aliveHeroes.reduce((lowest, hero) => 
+              (hero.currentHealth / hero.maxHealth) < (lowest.currentHealth / lowest.maxHealth) ? hero : lowest, aliveHeroes[0]);
+          }
+          // 40% chance to attack the hero with lowest defense
+          else if (Math.random() < 0.4) {
+            target = aliveHeroes.reduce((lowest, hero) => 
+              hero.defense < lowest.defense ? hero : lowest, aliveHeroes[0]);
+          }
+          // Otherwise random
+          else {
+            target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
+          }
+          
+          // Chance to defend if low on health
+          if (enemy.currentHealth < enemy.maxHealth * 0.25 && Math.random() < 0.5) {
+            enemy.defend();
+            this.log(`${enemy.icon} ${enemy.name} takes a defensive stance.`, 'enemy');
+            continue;
+          }
+          
+          // Critical hit chance
+          const isCritical = Math.random() < 0.15;
+          const damageMultiplier = isCritical ? 1.5 : 1;
+          
+          // Apply damage with potential critical hit
+          const damage = enemy.attackTarget(target, damageMultiplier);
+          
+          this.log(`${enemy.icon} ${enemy.name} ${isCritical ? 'critically ' : ''}attacks ${target.icon} ${target.name} for ${damage} damage!`, 'enemy');
+          
+          if (!target.isAlive) {
+            this.log(`${target.icon} ${target.name} has been defeated!`, 'system');
+          }
+          
+          this.updateUI();
+          
+          // Check if game over after each enemy attack
+          if (this.checkGameState()) break;
+        }
+        
+        // Enable buttons for next turn if game continues
+        if (!this.isGameOver && !this.waveCompleted) {
+          this.updateUI();
+          this.log('Your turn to attack.', 'system');
+        }
+      }
+      
+      checkGameState() {
+        // Check if all enemies are defeated
+        if (this.enemies.every(enemy => !enemy.isAlive)) {
+          this.waveCompleted = true;
+          
+          // Award bonus coins for completing the wave
+          const waveBonus = 20 + (this.wave * 10);
+          this.addCoins(waveBonus);
+          
+          this.log(`All enemies defeated! Wave ${this.wave} completed.`, 'system');
+          this.log(`Wave bonus: ${waveBonus} coins!`, 'system');
+          this.log('Get ready for the next wave!', 'system');
+          
+          this.levelUpHeroes();
+          this.newWaveButton.style.display = 'block';
+          this.shopButtons.style.display = 'flex';
+          return true;
+        }
+        
+        // Check if all heroes are defeated
+        if (this.heroes.every(hero => !hero.isAlive)) {
+          this.isGameOver = true;
+          this.log('All heroes have been defeated!', 'system');
+          this.showGameOver(false);
+          return true;
+        }
+        
+        // Check if player is defeated
+        if (!this.heroes[0].isAlive) {
+          this.isGameOver = true;
+          this.log('You have been defeated!', 'system');
+          this.showGameOver(false);
+          return true;
+        }
+        
+        return false;
+      }
+      
+      levelUpHeroes() {
+        this.heroes.forEach(hero => {
+          if (hero.isAlive) {
+            hero.level += 1;
+            
+            // Reduced stat increases for higher difficulty
+            const healthIncrease = Math.floor(hero.maxHealth * 0.15);
+            const attackIncrease = Math.floor(hero.attack * 0.12);
+            const defenseIncrease = Math.floor(hero.defense * 0.1);
+            
+            hero.maxHealth += healthIncrease;
+            // Only partially heal on level up (75% of max health)
+            hero.currentHealth = Math.min(hero.currentHealth + Math.floor(hero.maxHealth * 0.5), 
+                                  Math.floor(hero.maxHealth * 0.75));
+            hero.attack += attackIncrease;
+            hero.defense += defenseIncrease;
+            
+            this.log(`${hero.icon} ${hero.name} leveled up to level ${hero.level}!`, 'system');
+            this.log(`+${healthIncrease} HP, +${attackIncrease} ATK, +${defenseIncrease} DEF`, 'system');
+          }
+        });
+      }
+      
+      startNewWave() {
+        this.wave++;
+        this.currentWaveElement.textContent = this.wave;
+        this.waveCompleted = false;
+        this.newWaveButton.style.display = 'none';
+        this.shopButtons.style.display = 'none';
+        this.closeShop();
+        
+        this.generateEnemies();
+        this.updateUI();
+        
+        this.log(`Wave ${this.wave} started!`, 'system');
+        this.log('Your turn to attack.', 'system');
+      }
+      
+      showGameOver(victory) {
+        this.gameOverContainer.style.display = 'flex';
+        this.actionButtonsContainer.style.display = 'none';
+        
+        if (victory) {
+          this.gameOverMessage.textContent = `Victory! You completed ${this.wave} waves!`;
+        } else {
+          this.gameOverMessage.textContent = `Game Over! You reached wave ${this.wave}`;
+        }
+      }
+      
+      restart() {
+        this.wave = 1;
+        this.currentWaveElement.textContent = this.wave;
+        this.isGameOver = false;
+        this.waveCompleted = false;
+        this.coins = 0;
+        this.updateCoins();
+        
+        this.gameOverContainer.style.display = 'none';
+        this.actionButtonsContainer.style.display = 'flex';
+        this.newWaveButton.style.display = 'none';
+        this.shopButtons.style.display = 'none';
+        this.shopElement.style.display = 'none';
+        
+        this.logElement.innerHTML = '';
+        
+        this.initializeGame();
+      }
+      
+      updateUI() {
+        // Update heroes UI
+        this.heroes.forEach(hero => {
+          const element = document.getElementById(hero.id);
+          if (element) {
+            const healthFill = element.querySelector('.health-fill');
+            const specialFill = element.querySelector('.special-fill');
+            const nameElement = element.querySelector('.name');
+            const levelElement = element.querySelector('.level');
+            const attackElement = element.querySelector('.attack');
+            const defenseElement = element.querySelector('.defense');
+            
+            healthFill.style.width = `${(hero.currentHealth / hero.maxHealth) * 100}%`;
+            if (specialFill) specialFill.style.width = `${hero.specialMeter}%`;
+            
+            if (nameElement) nameElement.textContent = hero.name;
+            if (levelElement) levelElement.textContent = hero.level;
+            if (attackElement) attackElement.textContent = hero.attack;
+            if (defenseElement) defenseElement.textContent = hero.defense;
+            
+            if (hero.isAlive) {
+              element.classList.remove('dead');
+            } else {
+              element.classList.add('dead');
+            }
+          }
+        });
+        
+        // Update enemies UI
+        this.enemies.forEach(enemy => {
+          const element = document.getElementById(enemy.id);
+          if (element) {
+            const healthFill = element.querySelector('.health-fill');
+            const nameElement = element.querySelector('.name');
+            const levelElement = element.querySelector('.level');
+            const attackElement = element.querySelector('.attack');
+            const defenseElement = element.querySelector('.defense');
+            
+            healthFill.style.width = `${(enemy.currentHealth / enemy.maxHealth) * 100}%`;
+            
+            if (nameElement) nameElement.textContent = enemy.name;
+            if (levelElement) levelElement.textContent = enemy.level;
+            if (attackElement) attackElement.textContent = enemy.attack;
+            if (defenseElement) defenseElement.textContent = enemy.defense;
+            
+            if (enemy.isAlive) {
+              element.classList.remove('dead');
+            } else {
+              element.classList.add('dead');
+            }
+          }
+        });
+        
+        // Update buttons based on special meter
+        const player = this.heroes[0];
+        this.specialButton.disabled = player.specialMeter < 50;
+        this.healButton.disabled = player.specialMeter < 100;
+        
+        // Disable all buttons if game is over or wave completed
+        const buttons = document.querySelectorAll('#action-buttons button');
+        buttons.forEach(button => {
+          button.disabled = this.isGameOver || this.waveCompleted || !player.isAlive;
+        });
+      }
+      
+      log(message, type) {
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${type}-log`;
+        logEntry.textContent = message;
+        this.logElement.appendChild(logEntry);
+        this.logElement.scrollTop = this.logElement.scrollHeight;
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      new Game();
+    });
+  </script>
+</body>
+</html>
